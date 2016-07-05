@@ -32,7 +32,7 @@ inf = sbxInfo(path, true);
 % Set in to read the whole file if unset
 if nargin < 3 || N < 0, N = inf.max_idx + 1 - k; end
 % Read a larger chunk if optotune was used
-if ~isempty(inf.otwave), N = N*length(inf.otwave); end
+if ~isempty(inf.otwave) && (nargin < 5 || isinteger(optolevel)), N = N*length(inf.otwave); end
 % Make sure that we don't search beyond the end of the file
 if N > inf.max_idx + 1 - k, N = inf.max_idx + 1 - k; end
 
