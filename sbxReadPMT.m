@@ -26,13 +26,20 @@ function x = sbxReadPMT(path, k, N, pmt, optolevel)
 % informationi about the file
 
 % Force a reload of the global info variables. Without this, troube arises
-clearvars -global info 
+%clearvars -global info 
 inf = sbxInfo(path, true);
+% Check if optotune was used, accounting for the version of scanbox being
+% used
+optotune_used = false;
+if isfield(inf, 'volscan') && inf.volscan > 0, optotune_used = true; end
+if ~isfield(inf, 'volscan') && ~isempty(inf.otwave), optotune_used = true; end
 
+% Set to start at beginning if necessary
+if nargin < 2, k = 0; end
 % Set in to read the whole file if unset
 if nargin < 3 || N < 0, N = inf.max_idx + 1 - k; end
 % Read a larger chunk if optotune was used
-if ~isempty(inf.otwave) && (nargin < 5 || isinteger(optolevel)), N = N*length(inf.otwave); end
+if optotune_used && (nargin < 5 || isinteger(optolevel)), N = N*length(inf.otwave); end
 % Make sure that we don't search beyond the end of the file
 if N > inf.max_idx + 1 - k, N = inf.max_idx + 1 - k; end
 
@@ -69,7 +76,7 @@ if (isfield(inf, 'fid') && inf.fid ~= -1)
     end
     
     % Check if optotune was used
-    if ~isempty(inf.otwave)
+    if optotune_used
         if nargin < 5 || ~isempty(optolevel)
             if nargin < 5, optolevel = 1; end
             % If optotune was used, subset the correct frames
