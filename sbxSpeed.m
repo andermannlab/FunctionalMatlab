@@ -19,8 +19,6 @@ function speed = sbxSpeed(mouse, date, run)
 
     instantaneous_speed = zeros(length(running), 1);
     if ~isempty(instantaneous_speed)
-        size(diff(running))
-        size(instantaneous_speed)
         instantaneous_speed(2:end) = diff(running);
         instantaneous_speed(2) = 0;
         instantaneous_speed = instantaneous_speed*step_size*framerate;
