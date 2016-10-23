@@ -1,8 +1,7 @@
 function nginfo = sbxInfo(path, force)
-%get the global info variable, even though using global variables is a
-% terrible decision.
+%get the global info variable
 
-    % Declare both info_laoded and info as global variables
+    % Declare both info_loaded and info as global variables
     global info_loaded info
 
     % Make sure we're opening the info .mat file
