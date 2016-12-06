@@ -1,6 +1,9 @@
 function runs = sbxRuns(mouse, date)
 %SBXRUNS List all runs in a folder
     
+    % If date is an integer, convert to string
+    if ~ischar(date), date = num2str(date); end
+
     % Initialize the base directory and scan directory
     % Get the base directory from sbxDir.
     

@@ -9,6 +9,9 @@ function [out, varargout] = sbxLoad(mouse, date, run, type, varargin)
         return
     end
     
+    % If date is an integer, convert to string
+    if ~ischar(date), date = num2str(date); end
+    
     % Get the file path
     path = sbxPath(mouse, date, run, type);
     

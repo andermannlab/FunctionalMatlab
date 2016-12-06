@@ -1,9 +1,12 @@
 function speed = sbxSpeed(mouse, date, run)
 %SBXSPEED Return the speed of a mouse running on a 3d printed wheel from
 % date from the quadrature encoder
-
+    
+    speed = [];
     dirs = sbxDir(mouse, date, run);
     dirs = dirs.runs{1};
+    
+    if isempty(dirs.quad), return; end
     
     inf = sbxLoad(mouse, date, run, 'info');
     framerate = 30.98;
@@ -24,6 +27,6 @@ function speed = sbxSpeed(mouse, date, run)
         instantaneous_speed = instantaneous_speed*step_size*framerate;
     end
     
-    speed = conv(instantaneous_speed, ones(ceil(framerate), 1)/ceil(framerate), 'same');
+    speed = conv(instantaneous_speed, ones(ceil(framerate), 1)/ceil(framerate), 'same')';
 end
 
