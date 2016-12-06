@@ -1,4 +1,4 @@
-function affine_transforms = sbxAlignTurboRegCore(mov_path, startframe, nframes, target_mov_path, binframes, pmt, dfttarget, highpass)
+function affine_transforms = sbxAlignTurboRegCore(mov_path, startframe, nframes, target_mov_path, binframes, pmt, dfttarget, sigma, highpass)
 %SBXALIGNTURBOREGCORE aligns a file (given by path) using ImageJ's TurboReg
 %   NOTE: hardcoded path to ImageJ.
 
@@ -9,8 +9,9 @@ function affine_transforms = sbxAlignTurboRegCore(mov_path, startframe, nframes,
     if nargin < 5, binframes = 1; end
     % Set the default PMT channel to green
     if nargin < 6, pmt = 0; end
+    if nargin < 8, sigma = 5; end
     % Set default highpass filter to true
-    if nargin < 8, highpass = true; end
+    if nargin < 9, highpass = true; end
     
     % Initialize output and read frames
     affine_transforms = cell(1, nframes);

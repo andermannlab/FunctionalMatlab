@@ -1,17 +1,19 @@
-function frame = sbxAlignTargetCore(path, pmt, bin)
+function frame = sbxAlignTargetCore(path, pmt, bin, offset_beginning, refsize)
 %SBXALIGNTARGETCORE Aligns an sbx target file given by path. Assumes that
 %	the used pmt is 0 or green
 
     % Parameters --------------------------
-    refsize = 500; % How many frames (500)
+    %refsize = 500; % How many frames (500)
     upsample = 100; % Upsampling for alignment
     % -------------------------------------
 
     if nargin < 2, pmt = 0; end
     if nargin < 3, bin = 2; end
+    if nargin < 4, offset_beginning = 0; end
+    if nargin < 5, refsize = 500; end
     
     % Open first refsize frames of target file
-    ref = sbxReadPMT(path, 0, refsize, pmt);
+    ref = sbxReadPMT(path, offset_beginning, refsize, pmt);
     c = class(ref);
     
     % Get the standard edge removal 

@@ -23,7 +23,7 @@ function out = sbxAlignAffineChunkPath(path, startframe, nframes, pmt)
     tform = alignment.tform(pos:upos);
     trans = alignment.trans(pos:upos, :);
 
-    out = sbxAlignAffineApplyAffineDFT(path, startframe - 1, nframes, ...
+    out = sbxAlignAffineApplyAffineDFT(path, startframe, nframes, ...
             tform, trans, pmt);
 end
 

@@ -1,4 +1,4 @@
-function out = sbxAlignAffine(mouse, date, runs, returnimage, target, pmt)
+function out = sbxAlignAffine(mouse, date, runs, target, pmt, pars)
     % REMEMBER: PMT is 0-indexed
     % If return image is set to false, sbxAlignAffine will only align the
     % image
@@ -6,22 +6,34 @@ function out = sbxAlignAffine(mouse, date, runs, returnimage, target, pmt)
     % first run
     % Depends on hardcoded location of ImageJ and on sbxDir and sbxRuns
 
-    % Parameters ---------------------
-    chunksize = 1000; % Parfor chunking
+    % Default Parameters ---------------------
     refsize = 500; % Number of random samples for reference image
     tbin = 1; % Time to bin in seconds
-    % --------------------------------
+    highpass_sigma = 5; % Size of Gaussian blur to be subtracted from a 
+        % downsampled version of your image
+    refoffset = 500; % Number of frames to offset from beginning
+        % for the registration target
+    % ----------------------------------------
+    
+    chunksize = 1000;
+    
+    if nargin == 6
+        if exist(pars.refsize), refsize = pars.refsize; end
+        if exist(pars.tbin), tbin = pars.tbin; end
+        if exist(pars.highpass_sigma), highpass_sigma = pars.highpass_sigma; end
+        if exist(pars.refoffset), refoffset = pars.refoffset; end
+    end
     
     % Correct inputs
     if nargin < 3 || isempty(runs), runs = []; end
-    if nargin < 4 || isempty(returnimage), returnimage = true; end
-    if nargin < 5 || isempty(target), target = []; end
-    if nargin < 6 || isempty(pmt), pmt = 0; end
+    if nargin < 4 || isempty(target), target = []; end
+    if nargin < 5 || isempty(pmt), pmt = 0; end
     if pmt > 1, pmt = 1; end
     if pmt < 0, pmt = 0; end
     
+    returnimage = true;
     if isempty(runs), runs = sbxRuns(mouse, date); end
-    if length(runs) > 1, returnimage = false; end
+    if nargout < 1 || length(runs) > 1, returnimage = false; end
     
     % Determine if output needs to be saved
     saveoutput = false;
@@ -57,7 +69,7 @@ function out = sbxAlignAffine(mouse, date, runs, returnimage, target, pmt)
 
         for r = 1:length(allruns)
             path = sbxPath(mouse, date, allruns(r), 'sbx');
-            ref = sbxAlignTargetCore(path, pmt);
+            ref = sbxAlignTargetCore(path, pmt, 2, refoffset, refsize);
             targetrefs{r} = ref;
 
             [rpath, fname] = fileparts(path);
@@ -67,10 +79,10 @@ function out = sbxAlignAffine(mouse, date, runs, returnimage, target, pmt)
             writetiff(ref, refname, class(ref));
         end
         
-        bigref = sbxAlignTargetCore(path, pmt, 1);
+        bigref = sbxAlignTargetCore(path, pmt, 1, refoffset, refsize);
     
         % Get the cross-run transforms to apply later
-        xruntform = sbxAlignAffineCoreTurboRegAcrossRuns(targetpaths, 2);
+        xruntform = sbxAlignAffineCoreTurboRegAcrossRuns(targetpaths, 2, highpass_sigma);
         %xruntrans = sbxAlignAffineCoreDFTAcrossRuns(bigtargets, xruntform);
     
         % =================================================================
@@ -104,7 +116,7 @@ function out = sbxAlignAffine(mouse, date, runs, returnimage, target, pmt)
                 ootform = cell(1, nchunks);
                 for c = 1:nchunks
                     ootform{c} = sbxAlignTurboRegCore(path, (c-1)*runchunksize+1,...
-                        runchunksize, runrefname, binframes, pmt, targetrefs{allrunindex});
+                        runchunksize, runrefname, binframes, pmt, targetrefs{allrunindex}, highpass_sigma);
                 end
 
                 % Get the cross-run affine transform
@@ -131,6 +143,7 @@ function out = sbxAlignAffine(mouse, date, runs, returnimage, target, pmt)
                 known = indices(indices > 0);
 
                 % Now fix interpolated registration with dft registration
+                trans = zeros(nframes, 4);
                 if binframes > 1
                     % Interpolate any missing frames
                     tform = interpolateTransform(tform, known);
@@ -148,7 +161,6 @@ function out = sbxAlignAffine(mouse, date, runs, returnimage, target, pmt)
                         ootrans{c} = sbxAlignAffinePlusDFT(path, (c-1)*chunksize+1, chunksize, bigref, ootform{c}, pmt);
                     end
 
-                    trans = zeros(nframes, 4);
                     for c = 1:nchunks
                         pos = (c - 1)*chunksize + 1;
                         upos = min(c*chunksize, nframes);
@@ -156,7 +168,7 @@ function out = sbxAlignAffine(mouse, date, runs, returnimage, target, pmt)
                     end
                 end
 
-                save(afalign, 'tform', 'trans');
+                save(afalign, 'tform', 'trans', 'binframes');
             end
         end
     end
