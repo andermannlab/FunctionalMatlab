@@ -3,7 +3,7 @@ function out = sbxOnsets(mouse, date, run, ttlv, miniti)
     % particular mouse, date, and run.
     
     % Check if already created
-    dirsf = sbxDirs(mouse, date, run);
+    dirsf = sbxDir(mouse, date, run);
     dirs = dirsf.runs{1};
     spath = [dirs.path '\' dirs.sbx_name '.onsets'];
     if exist(spath)
@@ -25,7 +25,8 @@ function out = sbxOnsets(mouse, date, run, ttlv, miniti)
 
     % Load nidaq data
     nidaq = sbxLoad(mouse, date, run, 'ephys');
-    global info
+    sbxpath = sbxPath(mouse, date, run, 'sbx');
+    info = sbxInfo(sbxpath);
     nframes = info.max_idx + 1;
 
     % Get the appropriate nidaq channels
@@ -43,6 +44,14 @@ function out = sbxOnsets(mouse, date, run, ttlv, miniti)
 
     % Get the timing of monitor frames
     onset2p = getSbxMonitorFrames(nidaq.data(:, ch.twoP), nidaq.timeStamps, nframes);
+    if isempty(onset2p);
+        % This should only happen if there was a fatal error in ephys
+        % recording
+        disp('ERROR: Forced to quit in measurement of event onsets.');
+        disp(sprintf('   Frames did not match for %s on %s run %i', mouse, date, run));
+        out = [];
+        return;
+    end
 
     % Get the timing of visual stimuli
     onsetst = sbxTTLOnsets(nidaq.data(:,ch.OTB_visstim), nidaq.timeStamps, miniti, ttlv);

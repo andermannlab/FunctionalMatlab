@@ -39,6 +39,8 @@ function simplifycellsort(mouse, date, run, saveraw, overwrite)
         running = [];
     end
     
+    speed = sbxSpeed(mouse, date, run);
+    
     % Prep secondary output
     dff_noise = zeros(length(gd.cellsort), 1);
     dff_sigma = zeros(length(gd.cellsort), 1);
@@ -66,7 +68,8 @@ function simplifycellsort(mouse, date, run, saveraw, overwrite)
         try
             [noise_, ~, sigma_] = dffnoise(gd.cellsort(i).timecourse.dff_axon);
         catch ME
-            fprintf('Warning: dffnoise could not be determined due to problems with least-square fitting for cell %i\n', i);
+            fprintf(['Warning: dffnoise could not be determined due to ' ...
+                'problems with least-square fitting for cell %i\n'], i);
             noise_ = -1;
             sigma_ = -1;
         end
@@ -99,6 +102,7 @@ function simplifycellsort(mouse, date, run, saveraw, overwrite)
     
     % Get the distance moved determined from registration
     brainmotion = registrationMovement(mouse, date, run);
+    pupil = sbxPupil(mouse, date, run);
     
     % Get the onsets from sbxOnsets
     if isempty(dirs.ml)
@@ -106,12 +110,19 @@ function simplifycellsort(mouse, date, run, saveraw, overwrite)
         ons = sbxLicking(mouse, date, run);
         licking = ons.licking;
         if saveraw
-            save(spath, 'dff', 'raw', 'centroid', 'licking', 'brainmotion', 'raw_max', 'dff_max', 'dff_median', 'dff_noise', 'dff_sigma', 'deconvolved', 'running', 'framerate', 'edges');
+            save(spath, 'dff', 'raw', 'centroid', 'licking', 'brainmotion', ...
+                'raw_max', 'dff_max', 'dff_median', 'dff_noise', 'dff_sigma', ...
+                'deconvolved', 'running', 'framerate', 'edges', 'pupil', ...
+                'speed');
         else
-            save(spath, 'dff', 'centroid', 'licking', 'brainmotion', 'raw_max', 'dff_max', 'dff_median', 'dff_noise', 'dff_sigma', 'deconvolved', 'running', 'framerate', 'edges');
+            save(spath, 'dff', 'centroid', 'licking', 'brainmotion', 'raw_max', ...
+                'dff_max', 'dff_median', 'dff_noise', 'dff_sigma', ...
+                'deconvolved', 'running', 'framerate', 'edges', 'pupil', ...
+                'speed');
         end
     else
         ons = sbxOnsets(mouse, date, run);
+        if isempty(ons), return; end
         
         onsets = ons.onsets;
         licking = ons.licking;
@@ -122,9 +133,17 @@ function simplifycellsort(mouse, date, run, saveraw, overwrite)
         codes = struct('pavlovian', 1, 'plus', 3, 'minus', 4, 'neutral', 5, 'blank', 6);
         
         if saveraw
-            save(spath, 'dff', 'raw', 'centroid', 'brainmotion', 'raw_max', 'dff_max', 'dff_median', 'dff_noise', 'dff_sigma', 'deconvolved', 'running', 'framerate', 'edges', 'onsets', 'licking', 'ensure', 'quinine', 'condition', 'trialerror', 'codes');
+            save(spath, 'dff', 'raw', 'centroid', 'brainmotion', 'raw_max', ...
+                'dff_max', 'dff_median', 'dff_noise', 'dff_sigma', ...
+                'deconvolved', 'running', 'framerate', 'edges', 'onsets', ...
+                'licking', 'ensure', 'quinine', 'condition', 'trialerror', ...
+                'codes', 'pupil', 'speed');
         else
-            save(spath, 'dff', 'centroid', 'brainmotion', 'raw_max', 'dff_max', 'dff_median', 'dff_noise', 'dff_sigma', 'deconvolved', 'running', 'framerate', 'edges', 'onsets', 'licking', 'ensure', 'quinine', 'condition', 'trialerror', 'codes');
+            save(spath, 'dff', 'centroid', 'brainmotion', 'raw_max', ...
+                'dff_max', 'dff_median', 'dff_noise', 'dff_sigma', ...
+                'deconvolved', 'running', 'framerate', 'edges', 'onsets', ...
+                'licking', 'ensure', 'quinine', 'condition', 'trialerror', ...
+                'codes', 'pupil', 'speed');
         end
     end
 end

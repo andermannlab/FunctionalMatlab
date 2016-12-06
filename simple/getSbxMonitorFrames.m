@@ -25,6 +25,8 @@ function framet = getSbxMonitorFrames(nidaq, timestamps, nframes)
     % Check if pulses match frames
     if numel(framet) < nframes - 1 || numel(framet) > nframes
         w = warndlg(sprintf('Frame onsets measured by ephys, %i, do not match %i frames in movie', length(framet), nframes));
+        disp(sprintf('Frame onsets measured by ephys, %i, do not match %i frames in movie', length(framet), nframes));
+        framet = [];
     end
 
 end

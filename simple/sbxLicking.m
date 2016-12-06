@@ -3,9 +3,10 @@ function out = sbxLicking(mouse, date, run, ttlv, miniti)
     % particular mouse, date, and run.
     
 % Check if already created
-dirsf = sbxDirs(mouse, date, run);
+dirsf = sbxDir(mouse, date, run);
 dirs = dirsf.runs{1};
-spath = [dirs.path '\' dirs.sbx_name '.onsets'];
+
+spath = sbxPath(mouse, date, run, 'onsets', true);
 if exist(spath)
     out = load(spath, '-mat');
     return
