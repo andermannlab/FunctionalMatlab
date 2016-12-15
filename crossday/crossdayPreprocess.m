@@ -1,4 +1,5 @@
-function crossdayPreprocess(mouse, date)
+
+function crossdayPreprocess(mouse, date, verbose)
 %ALIGNPREPROCESS Identify all unique ROIs that have been previously found
 %   and correlate their masks with the masks of the current date. Save as a
 %   big ugly matlab file.
@@ -8,11 +9,13 @@ function crossdayPreprocess(mouse, date)
         disp('ERROR: Mouse and date do not exist');
         return;
     end
+    
+    if nargin < 3, verbose = 0; end
 
     % PARAMETERS FOR REMOVING OVERLAPS ------------------------------------
     sizediff = 8; % If one ROI is > sizediff larger than another, throw out
     overlapping_pixels = 2;
-    minimum_correlation = 0.1;
+    minimum_correlation = 0.05;
     keep_correlation_min = 0.5; % If there is a single match greater than 
     % this value, keep it
     keep_correlation_diff = 0.6; % If there are two or more matches and one
@@ -30,6 +33,7 @@ function crossdayPreprocess(mouse, date)
     end
 
     % Find out which dates contain IDs (for correlation) and get IDs
+    if verbose, disp('Finding previous dates'); end
     predates = [];
     ids = [];
     
@@ -44,8 +48,10 @@ function crossdayPreprocess(mouse, date)
     
     % Get a list of unique ROIs
     uids = unique(ids);
+    allids = ids(1:end);
     
     % Convert unique dates back to ROIs on individual days
+    if verbose, disp('ROI conversion back to days'); end
     dids = cell(1, length(predates));
     drois = cell(1, length(predates));
     for d = 1:length(predates), dids{d} = []; end
@@ -60,19 +66,31 @@ function crossdayPreprocess(mouse, date)
     
     % Returns images of each movie and the transform to get it to match to
     % the current date
+    if verbose, disp('Aligning across days'); end
     [xdaytform, targets] = crossdayAlignTargets(mouse, [predates str2num(date)]);
+    for d = 1:length(targets)
+        figure;
+        imagesc(imwarp(targets{d}, xdaytform{d}, 'OutputView', imref2d(size(targets{d}))));
+        colormap('gray');
+    end
     
     % Load in the primary day
+    if verbose, disp('Loading in primary day'); end
     [dmasks, dbinmasks, dtraces] = crossdayMasksTraces(mouse, date, []);
     dmaskran = zeros(4, size(dtraces, 2));
     for i = 1:size(dtraces, 2)
         xpos = find(sum(dbinmasks(:, :, i), 1) > 0);
         ypos = find(sum(dbinmasks(:, :, i), 2) > 0);
-        dmaskran(:, i) = [ypos(1) ypos(end) xpos(1) xpos(end)];
+        if isempty(xpos) || isempty(ypos)
+            dmaskran(:, i) = [1 2 1 2];
+        else
+            dmaskran(:, i) = [ypos(1) ypos(end) xpos(1) xpos(end)];
+        end
     end
     
     % For each day with unique ROI matches, read in the signals file, warp
     % the masks and warp the target image
+    if verbose, disp('Reading all other days'); end
     masks = cell(1, length(predates));
     binmasks = cell(1, length(predates));
     traces = cell(1, length(predates));
@@ -92,6 +110,7 @@ function crossdayPreprocess(mouse, date)
     
     % Simplify back into a single list of uids, this time only including
     % overlapping uids.
+    if verbose, disp('Correlating ROIs'); end
     uids = zeros(1, length(uids)) - 1;
     omasks = zeros(size(masks{1}, 1), size(masks{1}, 2), length(uids));
     obinmasks = zeros(size(masks{1}, 1), size(masks{1}, 2), length(uids));
@@ -109,37 +128,39 @@ function crossdayPreprocess(mouse, date)
             xpos = find(sum(binmasks{d}(:, :, r), 1) > 0);
             ypos = find(sum(binmasks{d}(:, :, r), 2) > 0);
             
-            for dr = 1:size(dmaskran, 2)
-                % Check that the ROIs are even close to nearby
-                orange = [min(ypos(1), dmaskran(1, dr)) max(ypos(end), dmaskran(2, dr)) ...
-                    min(xpos(1), dmaskran(3, dr)) max(xpos(end), dmaskran(4, dr))]; % Overlapping range
-                if orange(2) - orange(1) <= sizediff*(dmaskran(2, dr) - dmaskran(1, dr)) && ...
-                    orange(4) - orange(3) <= sizediff*(dmaskran(4, dr) - dmaskran(3, dr))
-                
-                    % Do a bitwise-and on the bitmasks
-                    opix = sum(sum(bitand(dbinmasks(orange(1):orange(2), orange(3):orange(4), dr), ...
-                        binmasks{d}(orange(1):orange(2), orange(3):orange(4), r))));
-                    if opix > overlapping_pixels
-                        % Finally, check that the correlation of the masks
-                        % is high enough
-                        
-                        cc = corr2(dmasks(orange(1):orange(2), orange(3):orange(4), dr), ...
-                            masks{d}(orange(1):orange(2), orange(3):orange(4), r));
-                        if cc > minimum_correlation
-                            % Save for human analysis
-                            if sum(uids(1:overlappingrois) == dids{d}(r)) == 0
-                                overlappingrois = overlappingrois + 1;
+            if ~isempty(xpos) && ~isempty(ypos)
+                for dr = 1:size(dmaskran, 2)
+                    % Check that the ROIs are even close to nearby
+                    orange = [min(ypos(1), dmaskran(1, dr)) max(ypos(end), dmaskran(2, dr)) ...
+                        min(xpos(1), dmaskran(3, dr)) max(xpos(end), dmaskran(4, dr))]; % Overlapping range
+                    if orange(2) - orange(1) <= sizediff*(dmaskran(2, dr) - dmaskran(1, dr)) && ...
+                        orange(4) - orange(3) <= sizediff*(dmaskran(4, dr) - dmaskran(3, dr))
 
-                                uids(overlappingrois) = dids{d}(r);
-                                omasks(:, :, overlappingrois) = masks{d}(:, :, r);
-                                obinmasks(:, :, overlappingrois) = binmasks{d}(:, :, r);
-                                omaskran(:, overlappingrois) = orange;
-                                otraces(1:size(traces{d}(:, r), 1), overlappingrois) = traces{d}(:, r);
+                        % Do a bitwise-and on the bitmasks
+                        opix = sum(sum(bitand(dbinmasks(orange(1):orange(2), orange(3):orange(4), dr), ...
+                            binmasks{d}(orange(1):orange(2), orange(3):orange(4), r))));
+                        if opix > overlapping_pixels
+                            % Finally, check that the correlation of the masks
+                            % is high enough
+
+                            cc = corr2(dmasks(orange(1):orange(2), orange(3):orange(4), dr), ...
+                                masks{d}(orange(1):orange(2), orange(3):orange(4), r));
+                            if cc > minimum_correlation
+                                % Save for human analysis
+                                if sum(uids(1:overlappingrois) == dids{d}(r)) == 0
+                                    overlappingrois = overlappingrois + 1;
+
+                                    uids(overlappingrois) = dids{d}(r);
+                                    omasks(:, :, overlappingrois) = masks{d}(:, :, r);
+                                    obinmasks(:, :, overlappingrois) = binmasks{d}(:, :, r);
+                                    omaskran(:, overlappingrois) = orange;
+                                    otraces(1:size(traces{d}(:, r), 1), overlappingrois) = traces{d}(:, r);
+                                end
+
+                                matches{dr} = [matches{dr} dids{d}(r)];
+                                matchcorrs{dr} = [matchcorrs{dr} cc];
+                                matchoverlaps{dr} = [matchoverlaps{dr} opix];
                             end
-                            
-                            matches{dr} = [matches{dr} dids{d}(r)];
-                            matchcorrs{dr} = [matchcorrs{dr} cc];
-                            matchoverlaps{dr} = [matchoverlaps{dr} opix];
                         end
                     end
                 end
@@ -148,6 +169,7 @@ function crossdayPreprocess(mouse, date)
     end
     
     % Get the final IDs 
+    if verbose, disp('Finalizing and saving'); end
     finids = zeros(1, size(dtraces, 2)) - 1;
     for dr = 1:length(finids)
         [sortcorrs, sortorder] = sort(matchcorrs{dr});
@@ -175,10 +197,16 @@ function crossdayPreprocess(mouse, date)
     images = targets;
     imdates = predates;
     
+    uidcounts = zeros(1, overlappingrois);
+    for i = 1:length(uids)
+        uidcounts(i) = sum(allids == uids(i));
+    end
+    
     dir = sbxDir(mouse, date);
     path = sprintf('%s%s_%s_crossday-cell-preprocessing.mat', dir.date_mouse, mouse, date);
     
     save(path, 'uids', 'masks', 'binmasks', 'orange', 'traces', 'images', ...
-        'dmasks', 'dbinmasks', 'dtraces', 'matches', 'matchcorrs', 'matchoverlaps', 'finids', 'imdates');
+        'dmasks', 'dbinmasks', 'dtraces', 'matches', 'matchcorrs', ...
+        'matchoverlaps', 'finids', 'imdates', 'uidcounts');
                     
             
