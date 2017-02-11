@@ -5,12 +5,11 @@ function nginfo = sbxInfo(path, force)
     global info_loaded info
 
     % Make sure we're opening the info .mat file
-    if strcmp(path(end - 3:end), '.sbx')
-        path = [path(1:end - 4) '.mat'];
-    elseif ~strcmp(path(end - 3:end), '.mat')
-        path = [path '.mat'];
-    end
-    base = path(1:end - 4);
+    [parent, fname, ~] = fileparts(path);
+    regfind = strfind(fname, '_reg');
+    if ~isempty(regfind), fname = fname(1:regfind-1); end
+    base = [parent '\' fname];
+    ipath = [base '.mat'];
 
     % Force reopening info if loading a file
     if nargin == 2 && force
@@ -33,7 +32,7 @@ function nginfo = sbxInfo(path, force)
         end
 
         % Load the .mat info file
-        load(path);
+        load(ipath);
 
         % Add an alignment line if possible
         if(exist([base, '.align']))
@@ -70,8 +69,8 @@ function nginfo = sbxInfo(path, force)
                 factor = 2;
         end
 
-        info.fid = fopen([base '.sbx']);
-        d = dir([base '.sbx']);
+        info.fid = fopen(path);
+        d = dir(path);
         info.nsamples = (info.sz(2)*info.recordsPerBuffer*2*info.nchan);   % bytes per record 
 
         if isfield(info, 'scanbox_version') && info.scanbox_version >= 2
